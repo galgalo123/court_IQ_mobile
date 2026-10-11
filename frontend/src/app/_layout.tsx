@@ -1,21 +1,38 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
-import { RoleProvider } from '@/contexts/role-context';
+import { palette } from '@/constants/palette';
+import { AuthProvider, useAuth } from '@/contexts/auth-context';
 
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <RoleProvider>
-        <AnimatedSplashOverlay />
-        <AppTabs />
-      </RoleProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <RootStack />
+    </AuthProvider>
+  );
+}
+
+// Each role gets its own tab set. Only the group for the signed-in role is available.
+function RootStack() {
+  const { user } = useAuth();
+  const role = user?.role;
+
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.background } }}>
+      <Stack.Protected guard={!user}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+      <Stack.Protected guard={role === 'Statistician'}>
+        <Stack.Screen name="(statistician)" />
+      </Stack.Protected>
+      <Stack.Protected guard={role === 'Player'}>
+        <Stack.Screen name="(player)" />
+      </Stack.Protected>
+      <Stack.Protected guard={role === 'Coach'}>
+        <Stack.Screen name="(coach)" />
+      </Stack.Protected>
+      <Stack.Protected guard={role === 'Medical'}>
+        <Stack.Screen name="(medical)" />
+      </Stack.Protected>
+    </Stack>
   );
 }
