@@ -1,27 +1,31 @@
 import { createContext, useContext, useMemo, useState, type PropsWithChildren } from 'react';
 
 import type { Role } from '@/features/roles';
+import type { Team } from '@/features/team';
 
-export type User = { name: string; email: string; role: Role };
+export type Account = { name: string; email: string; role: Role };
+export type User = Account & { team: Team | null };
 
 type AuthValue = {
   user: User | null;
-  signIn: (user: User) => void;
-  signUp: (user: User) => void;
+  signIn: (account: Account) => void;
+  signUp: (account: Account) => void;
+  createTeam: (team: Team) => void;
   signOut: () => void;
 };
 
 const AuthContext = createContext<AuthValue | null>(null);
 
-// In-memory session only. Replace with the backend sign-in and role-approval flow.
+// In-memory session only. Replace with the backend sign-in and team approval flow.
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
 
   const value = useMemo<AuthValue>(
     () => ({
       user,
-      signIn: (next) => setUser(next),
-      signUp: (next) => setUser(next),
+      signIn: (account) => setUser({ ...account, team: null }),
+      signUp: (account) => setUser({ ...account, team: null }),
+      createTeam: (team) => setUser((current) => (current ? { ...current, team } : current)),
       signOut: () => setUser(null),
     }),
     [user],

@@ -3,20 +3,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { palette } from '@/constants/palette';
 import { useAuth } from '@/contexts/auth-context';
+import { findLeague } from '@/features/league';
 
 export function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const league = findLeague(user?.team?.leagueId);
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.kicker}>PROFILE</Text>
         <Text style={styles.title}>{user?.name ?? 'Account'}</Text>
+
         <View style={styles.card}>
           <Text style={styles.label}>Role</Text>
           <Text style={styles.value}>{user?.role}</Text>
           <Text style={styles.label}>Email</Text>
           <Text style={styles.value}>{user?.email}</Text>
         </View>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>Team</Text>
+          <Text style={styles.value}>{user?.team?.name ?? 'No team'}</Text>
+          <Text style={styles.label}>League</Text>
+          <Text style={styles.value}>{league?.name ?? '-'}</Text>
+          <Text style={styles.label}>Home venue</Text>
+          <Text style={styles.value}>{user?.team?.homeVenue || '-'}</Text>
+        </View>
+
         <Pressable onPress={signOut} style={styles.signOut}>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
