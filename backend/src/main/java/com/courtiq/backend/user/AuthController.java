@@ -1,5 +1,7 @@
 package com.courtiq.backend.user;
 
+import com.courtiq.backend.team.TeamMember;
+import com.courtiq.backend.team.TeamMemberRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,59 +16,47 @@ public class AuthController {
 
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
+    private final TeamMemberRepository memberships;
 
-    public AuthController(UserRepository users, PasswordEncoder passwordEncoder) {
+    public AuthController(UserRepository users, PasswordEncoder passwordEncoder, TeamMemberRepository memberships) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
+        this.memberships = memberships;
     }
 
-    // The JSON the app sends when someone signs up.
-    public record SignUpRequest(String name, String email, String password, String role) {}
+    // identifier is either an email address or a phone number.
+    public record SignInRequest(String identifier, String password) {}
 
-    // The only user details sent back. The password hash is never included.
-    public record UserResponse(Long id, String name, String email, Role role, boolean approved) {}
+    public record SignInResponse(Long id, String name, String email, Role role, boolean approved,
+                                 Long teamId, boolean manager, String gender, Position position,
+                                 Integer heightInches, String height) {}
 
-    @PostMapping("/sign-up")
-    public ResponseEntity<?> signUp(@RequestBody SignUpRequest request) {
-        // 1. Required fields
-        if (isBlank(request.name()) || isBlank(request.email())
-                || isBlank(request.password()) || isBlank(request.role())) {
-            return ResponseEntity.badRequest().body("name, email, password and role are required");
+    @PostMapping("/sign-in")
+    public ResponseEntity<?> signIn(@RequestBody SignInRequest request) {
+        if (isBlank(request.identifier()) || isBlank(request.password())) {
+            return ResponseEntity.badRequest().body("email or phone number and password are required");
         }
 
-        String name = request.name().trim();
-        String email = request.email().trim().toLowerCase();
+        String identifier = request.identifier().trim();
+        User user = identifier.contains("@")
+                ? users.findByEmail(identifier.toLowerCase()).orElse(null)
+                : users.findByPhone(PhoneNumbers.normalize(identifier)).orElse(null);
 
-        // 2. Email format
-        if (!email.contains("@")) {
-            return ResponseEntity.badRequest().body("email is not valid");
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("wrong email or phone number, or password");
         }
 
-        // 3. Password length
-        if (request.password().length() < 8) {
-            return ResponseEntity.badRequest().body("password must be at least 8 characters");
+        TeamMember membership = memberships.findByUserId(user.getId()).stream().findFirst().orElse(null);
+        if (membership == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("this account is not linked to a team yet");
         }
 
-        // 4. Role
-        Role role;
-        try {
-            role = Role.valueOf(request.role().trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("role must be STATISTICIAN, PLAYER, COACH or MEDICAL");
-        }
-
-        // 5. Duplicate email
-        if (users.existsByEmail(email)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("an account with this email already exists");
-        }
-
-        // 6. Save the user, with the password hashed
-        User saved = users.save(new User(name, email, passwordEncoder.encode(request.password()), role));
-
-        // 7. Send back safe fields only
-        UserResponse response = new UserResponse(
-                saved.getId(), saved.getName(), saved.getEmail(), saved.getRole(), saved.isApproved());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        Integer inches = user.getHeightInches();
+        String height = inches == null ? null : (inches / 12) + "'" + (inches % 12);
+        return ResponseEntity.ok(new SignInResponse(
+                user.getId(), user.getName(), user.getEmail(), user.getRole(), user.isApproved(),
+                membership.getTeamId(), membership.isManager(),
+                user.getGender(), user.getPosition(), inches, height));
     }
 
     private static boolean isBlank(String value) {

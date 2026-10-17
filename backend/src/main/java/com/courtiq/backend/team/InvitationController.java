@@ -71,9 +71,6 @@ public class InvitationController {
         if (invitation == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("invitation code not found");
         }
-        if (invitation.isUsed()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("this code has already been used");
-        }
         if (Instant.now().isAfter(invitation.getExpiresAt())) {
             return ResponseEntity.status(HttpStatus.GONE).body("this code has expired");
         }
@@ -81,10 +78,8 @@ public class InvitationController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("you are already a member of this team");
         }
 
-        // Joining as a member, never as manager. Only the team creator is the manager.
+        // Joins as a regular member. Many people can use the same code, each joins once.
         memberships.save(new TeamMember(user.getId(), invitation.getTeamId(), false));
-        invitation.markUsed(user.getId());
-        invitations.save(invitation);
 
         return ResponseEntity.ok(new RedeemResponse(invitation.getTeamId(), user.getId(), false));
     }

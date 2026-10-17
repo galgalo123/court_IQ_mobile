@@ -4,9 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { palette } from '@/constants/palette';
 import { useAuth } from '@/contexts/auth-context';
 import { findLeague } from '@/features/league';
+import { positionLabel } from '@/features/profile';
+import { useProfile } from '@/lib/use-profile';
 
 export function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const { profile, loading } = useProfile();
   const league = findLeague(user?.team?.leagueId);
 
   return (
@@ -26,9 +29,25 @@ export function ProfileScreen() {
           <Text style={styles.label}>Team</Text>
           <Text style={styles.value}>{user?.team?.name ?? 'No team'}</Text>
           <Text style={styles.label}>League</Text>
-          <Text style={styles.value}>{league?.name ?? '-'}</Text>
+          <Text style={styles.value}>{league?.name ?? '—'}</Text>
           <Text style={styles.label}>Home venue</Text>
-          <Text style={styles.value}>{user?.team?.homeVenue || '-'}</Text>
+          <Text style={styles.value}>{user?.team?.homeVenue || '—'}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>Playing details</Text>
+          {loading ? (
+            <Text style={styles.value}>Loading...</Text>
+          ) : (
+            <>
+              <Text style={styles.label}>Position</Text>
+              <Text style={styles.value}>{positionLabel(profile?.position)}</Text>
+              <Text style={styles.label}>Height</Text>
+              <Text style={styles.value}>{profile?.height ?? '—'}</Text>
+              <Text style={styles.label}>Gender</Text>
+              <Text style={styles.value}>{profile?.gender === 'men' ? "Men's" : profile?.gender === 'women' ? "Women's" : '—'}</Text>
+            </>
+          )}
         </View>
 
         <Pressable onPress={signOut} style={styles.signOut}>

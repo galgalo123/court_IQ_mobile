@@ -11,30 +11,26 @@ export default function RootLayout() {
   );
 }
 
-// Order matters: sign in, then register a team, then the dashboard for the role.
+// Signed-out people see the auth screens. Signed-in people see the tabs for their role.
 function RootStack() {
   const { user } = useAuth();
   const role = user?.role;
-  const hasTeam = !!user?.team;
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.background } }}>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
-      <Stack.Protected guard={!!user && !hasTeam}>
-        <Stack.Screen name="(team-setup)" />
-      </Stack.Protected>
-      <Stack.Protected guard={hasTeam && role === 'Statistician'}>
+      <Stack.Protected guard={role === 'Statistician'}>
         <Stack.Screen name="(statistician)" />
       </Stack.Protected>
-      <Stack.Protected guard={hasTeam && role === 'Player'}>
+      <Stack.Protected guard={role === 'Player'}>
         <Stack.Screen name="(player)" />
       </Stack.Protected>
-      <Stack.Protected guard={hasTeam && role === 'Coach'}>
+      <Stack.Protected guard={role === 'Coach'}>
         <Stack.Screen name="(coach)" />
       </Stack.Protected>
-      <Stack.Protected guard={hasTeam && role === 'Medical'}>
+      <Stack.Protected guard={role === 'Medical'}>
         <Stack.Screen name="(medical)" />
       </Stack.Protected>
     </Stack>
